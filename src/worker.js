@@ -248,13 +248,35 @@ export default {
   async fetch(request, env) {
     const url=new URL(request.url);
     if(request.method==='GET' && url.pathname==='/') return new Response('Horizon Character Bot is online.');
+    if(request.method==='GET' && url.pathname==='/health') {
+      return Response.json({
+        online: true,
+        version: '2.0.2-cf-signature-fix',
+        has_discord_public_key: Boolean(env.DISCORD_PUBLIC_KEY),
+        discord_public_key_length: String(env.DISCORD_PUBLIC_KEY || '').trim().length,
+        has_discord_token: Boolean(env.DISCORD_TOKEN),
+        has_client_id: Boolean(env.DISCORD_CLIENT_ID),
+        has_guild_id: Boolean(env.DISCORD_GUILD_ID),
+        has_supabase_url: Boolean(env.SUPABASE_URL),
+        has_supabase_key: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
+      });
+    }
     if(request.method==='GET' && url.pathname==='/register'){
       if(!env.SETUP_KEY || url.searchParams.get('key')!==env.SETUP_KEY) return new Response('Unauthorized',{status:401});
       const result=await registerCommands(env); return Response.json(result,{status:result.ok?200:500});
     }
-    if(request.method!=='POST' || url.pathname!=='/interactions') return new Response('Not found',{status:404});
-    const signature=request.headers.get('x-signature-ed25519'); const timestamp=request.headers.get('x-signature-timestamp'); const raw=await request.text();
-    if(!signature || !timestamp || !(await verifyKey(raw,signature,timestamp,env.DISCORD_PUBLIC_KEY))) return new Response('Bad request signature',{status:401});
+    if(request.method!=='POST' || (url.pathname!=='/interactions' && url.pathname!=='/')) return new Response('Not found',{status:404});
+
+    const signature=request.headers.get('x-signature-ed25519');
+    const timestamp=request.headers.get('x-signature-timestamp');
+    if(!signature || !timestamp || !env.DISCORD_PUBLIC_KEY) return new Response('Missing Discord signature configuration',{status:401});
+
+    // Discord signs the exact raw request bytes. Verify those bytes before parsing JSON.
+    const rawBytes = await request.clone().arrayBuffer();
+    const valid = await verifyKey(rawBytes, signature, timestamp, String(env.DISCORD_PUBLIC_KEY).trim());
+    if(!valid) return new Response('Bad request signature',{status:401});
+
+    const raw = new TextDecoder().decode(rawBytes);
     const i=JSON.parse(raw);
     try{
       if(i.type===1) return Response.json({type:1});
