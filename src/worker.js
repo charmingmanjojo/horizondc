@@ -257,7 +257,7 @@ export default {
     if(!signature || !timestamp || !(await verifyKey(raw,signature,timestamp,env.DISCORD_PUBLIC_KEY))) return new Response('Bad request signature',{status:401});
     const i=JSON.parse(raw);
     try{
-      if(i.type===1) return response({});
+      if(i.type===1) return Response.json({type:1});
       if(i.type===2) return await slash(i,env);
       if(i.type===3){ if(i.data.custom_id.startsWith('review')) return await reviewComponent(i,env); return await component(i,env); }
       if(i.type===5) return await modal(i,env);
