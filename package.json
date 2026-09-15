@@ -1,15 +1,17 @@
 {
-  "name": "horizon-character-bot",
-  "version": "1.0.0",
+  "name": "horizon-character-bot-cloudflare",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "register": "node src/register-commands.js"
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.4",
-    "discord.js": "^14.27.0",
-    "dotenv": "^16.6.1"
+    "@supabase/supabase-js": "^2.116.0",
+    "discord-interactions": "^4.4.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.131.2"
   }
 }
