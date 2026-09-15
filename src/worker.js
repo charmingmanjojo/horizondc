@@ -34,34 +34,40 @@ const AFFILIATIONS = [
   ['white lantern corps', 'White Lantern Corps'],
 ];
 
-const MANTLES = [
-  ['none', 'None'],
-  ['superman', 'Superman'],
-  ['wonder woman', 'Wonder Woman'],
-  ['aquaman', 'Aquaman'],
+const STAFF_MANTLES = [
+  { name: 'Superman', value: 'superman' },
+  { name: 'Wonder Woman', value: 'wonder woman' },
+  { name: 'Aquaman', value: 'aquaman' },
+  { name: 'Batman', value: 'batman' },
+  { name: 'Robin', value: 'robin' },
+  { name: 'Clear', value: 'none' },
 ];
 
 const THEMES = {
-  default: 0x3c5f8a,
-  kryptonian: 0x2563eb,
-  atlantean: 0x0284c7,
-  amazonian: 0xeab308,
-  metahuman: 0x9333ea,
-  alien: 0x84cc16,
-  'green lantern corps': 0x16a34a,
-  'blue lantern corps': 0x2563eb,
-  'yellow lantern corps': 0xeab308,
-  'red lantern corps': 0xdc2626,
-  'orange lantern corps': 0xea580c,
-  'indigo tribe': 0x7c3aed,
-  'star sapphires': 0xdb2777,
-  'black lantern corps': 0x111827,
-  'white lantern corps': 0xe5e7eb,
-  superman: 0xdc2626,
-  'wonder woman': 0xeab308,
-  aquaman: 0x0284c7,
-  batman: 0xfacc15,
-  robin: 0xf59e0b,
+  default: { color: 0x3c5f8a, icon: null },
+
+  human: { color: 0x64748b, icon: null },
+  metahuman: { color: 0x7c3aed, icon: null },
+  alien: { color: 0x84cc16, icon: 'omnitrix.png' },
+  kryptonian: { color: 0x2563eb, icon: 'superman.png' },
+  atlantean: { color: 0x0284c7, icon: 'aquaman.png' },
+  amazonian: { color: 0xd4a017, icon: 'wonder-woman.png' },
+
+  'green lantern corps': { color: 0x16a34a, icon: 'green-lantern.png' },
+  'blue lantern corps': { color: 0x2563eb, icon: 'blue-lantern.png' },
+  'yellow lantern corps': { color: 0xeab308, icon: 'yellow-lantern.png' },
+  'red lantern corps': { color: 0xdc2626, icon: 'red-lantern.png' },
+  'orange lantern corps': { color: 0xea580c, icon: 'orange-lantern.png' },
+  'indigo tribe': { color: 0x7c3aed, icon: 'indigo-lantern.png' },
+  'star sapphires': { color: 0xdb2777, icon: 'star-sapphire.png' },
+  'black lantern corps': { color: 0x111827, icon: 'black-lantern.png' },
+  'white lantern corps': { color: 0xe5e7eb, icon: 'white-lantern.png' },
+
+  superman: { color: 0xdc2626, icon: 'superman.png' },
+  'wonder woman': { color: 0xd4a017, icon: 'wonder-woman.png' },
+  aquaman: { color: 0x0284c7, icon: 'aquaman.png' },
+  batman: { color: 0xfacc15, icon: 'batman.png' },
+  robin: { color: 0xef4444, icon: 'robin.png' },
 };
 
 const BASELINES = {
@@ -142,16 +148,27 @@ function isLantern(v) {
   return x.includes('lantern') || x === 'indigo tribe' || x === 'star sapphires';
 }
 
-function colorFor(c) {
+function themeFor(c) {
   const b = c?.data?.basic || {};
-  const a = lower(b.affiliation);
-  const m = lower(b.alias);
-  const s = lower(b.species);
+  const affiliation = lower(b.affiliation);
+  const mantle = lower(b.alias);
+  const species = lower(b.species);
 
-  if (isLantern(a) && THEMES[a]) return THEMES[a];
-  if (THEMES[m]) return THEMES[m];
-  if (THEMES[a]) return THEMES[a];
-  return THEMES[s] || THEMES.default;
+  // Visual priority: Lantern Corps > Staff Mantle > Species > Default.
+  if (isLantern(affiliation) && THEMES[affiliation]) return THEMES[affiliation];
+  if (THEMES[mantle]) return THEMES[mantle];
+  if (THEMES[species]) return THEMES[species];
+  return THEMES.default;
+}
+
+function colorFor(c) {
+  return themeFor(c).color;
+}
+
+function iconUrlFor(c) {
+  const icon = themeFor(c).icon;
+  if (!icon) return null;
+  return `https://horizondc.crownfallrpg.workers.dev/assets/${icon}`;
 }
 
 function completion(c) {
@@ -180,7 +197,37 @@ function baselineFor(c) {
   return chunks.join('\n\n');
 }
 
-function sheetEmbed(c) {
+function pageName(page) {
+  return {
+    basic: 'Basic Info',
+    appearance: 'Appearance',
+    personality: 'Personality',
+    abilities: 'Abilities / Equipment',
+    history: 'Backstory / History',
+    rp: 'RP Information',
+  }[page] || 'Basic Info';
+}
+
+function pageNumber(page) {
+  return {
+    basic: 1,
+    appearance: 2,
+    personality: 3,
+    abilities: 4,
+    history: 5,
+    rp: 6,
+  }[page] || 1;
+}
+
+function textField(name, value, inline = false) {
+  return {
+    name,
+    value: String(value || '—').slice(0, 1024),
+    inline,
+  };
+}
+
+function sheetEmbed(c, page = 'basic') {
   const d = c.data || {};
   const b = d.basic || {};
   const a = d.appearance || {};
@@ -188,53 +235,113 @@ function sheetEmbed(c) {
   const ab = d.abilities || {};
   const h = d.history || {};
   const rp = d.rp || {};
+  const title = `${b.name || 'Unnamed Character'}${b.alias ? ` — ${b.alias}` : ''}`.toUpperCase();
 
-  return {
-    title: `${b.name || 'Unnamed Character'}${b.alias ? ` — ${b.alias}` : ''}`,
-    description: `**Status:** ${String(c.status).replaceAll('_', ' ').toUpperCase()}\n**Completion:** ${completion(c)}%`,
+  const iconUrl = iconUrlFor(c);
+
+  const embed = {
+    author: {
+      name: 'DETECTIVE COMICS: HORIZON',
+      ...(iconUrl ? { icon_url: iconUrl } : {}),
+    },
+    title,
     color: colorFor(c),
-    fields: [
-      {
-        name: 'Basic Information',
-        value:
-          `**Age:** ${b.age || '—'}\n` +
-          `**Species:** ${b.species || '—'}\n` +
-          `**Affiliation:** ${b.affiliation || 'None'}\n` +
-          `**Occupation:** ${b.occupation || '—'}\n` +
-          `**Origin:** ${b.origin || '—'}`,
-        inline: false,
-      },
-      {
-        name: 'Appearance',
-        value: (a.description || 'Not provided').slice(0, 1024),
-        inline: false,
-      },
-      {
-        name: 'Personality',
-        value: (p.summary || 'Not provided').slice(0, 1024),
-        inline: false,
-      },
-      {
-        name: 'Abilities / Equipment',
-        value: (ab.summary || baselineFor(c) || 'Not provided').slice(0, 1024),
-        inline: false,
-      },
-      {
-        name: 'History',
-        value: (h.summary || 'Not provided').slice(0, 1024),
-        inline: false,
-      },
-      {
-        name: 'RP Information',
-        value: (rp.notes || 'Not provided').slice(0, 1024),
-        inline: false,
-      },
-    ],
-    footer: { text: 'Detective Comics: Horizon' },
+    fields: [],
+    ...(iconUrl ? { thumbnail: { url: iconUrl } } : {}),
+    footer: {
+      text: `${pageName(page)} • Page ${pageNumber(page)} of 6`,
+    },
   };
+
+  if (page === 'basic') {
+    embed.fields = [
+      textField('Basic Info', [
+        `**Name**\n${b.name || '—'}`,
+        `**Age**\n${b.age || '—'}`,
+        `**Species**\n${b.species || '—'}`,
+        `**Mantle / Alias**\n${b.alias || 'None'}`,
+        `**Affiliation**\n${b.affiliation || 'None / Independent'}`,
+        `**Occupation**\n${b.occupation || '—'}`,
+        `**Origin**\n${b.origin || '—'}`,
+        `**Build**\n${a.build || '—'}`,
+      ].join('\n\n')),
+    ];
+  }
+
+  if (page === 'appearance') {
+    embed.fields = [
+      textField('Appearance', a.description || 'Not provided'),
+      textField('Height', a.height || '—', true),
+      textField('Build', a.build || '—', true),
+    ];
+  }
+
+  if (page === 'personality') {
+    embed.fields = [
+      textField('Personality', p.summary || 'Not provided'),
+      textField('Goals / Motivations', p.goals || '—', true),
+      textField('Flaws / Fears', p.flaws || '—', true),
+    ];
+  }
+
+  if (page === 'abilities') {
+    embed.fields = [
+      textField('Abilities / Equipment', ab.summary || baselineFor(c) || 'Not provided'),
+    ];
+  }
+
+  if (page === 'history') {
+    const history = String(h.summary || 'Not provided');
+    const chunks = [];
+    for (let i = 0; i < history.length; i += 1024) {
+      chunks.push(history.slice(i, i + 1024));
+    }
+    embed.fields = chunks.slice(0, 5).map((chunk, idx) =>
+      textField(idx === 0 ? 'Backstory / History' : 'Backstory / History (continued)', chunk)
+    );
+  }
+
+  if (page === 'rp') {
+    embed.fields = [
+      textField('Writer Notes', rp.notes || 'Not provided'),
+      textField('Wanted Connections', rp.connections || '—'),
+      textField('Status', String(c.status).replaceAll('_', ' ').toUpperCase(), true),
+      textField('Completion', `${completion(c)}%`, true),
+    ];
+  }
+
+  return embed;
 }
 
-function select(customId, placeholder, values, current) {
+function pageButtons(c, current = 'basic', prefix = 'page') {
+  const id = c.id;
+  const pages = [
+    ['basic', 'Basic Info'],
+    ['appearance', 'Appearance'],
+    ['personality', 'Personality'],
+    ['abilities', 'Abilities'],
+    ['history', 'Backstory / History'],
+    ['rp', 'RP Info'],
+  ];
+
+  const rows = [];
+  for (let i = 0; i < pages.length; i += 5) {
+    rows.push({
+      type: 1,
+      components: pages.slice(i, i + 5).map(([value, label]) => ({
+        type: 2,
+        style: value === current ? 2 : 1,
+        label,
+        custom_id: `${prefix}:${id}:${value}`,
+        disabled: value === current,
+      })),
+    });
+  }
+  return rows;
+}
+
+function select(customId, placeholder, values, current, blankValue = null) {
+  const normalizedCurrent = lower(current) || blankValue;
   return {
     type: 1,
     components: [
@@ -247,36 +354,26 @@ function select(customId, placeholder, values, current) {
         options: values.map(([value, label]) => ({
           label,
           value,
-          default: lower(current) === value,
+          default: normalizedCurrent === value,
         })),
       },
     ],
   };
 }
 
-function editorComponents(c) {
+function editorComponents(c, currentPage = 'basic') {
   const id = c.id;
   const b = c.data?.basic || {};
 
   return [
     select(`species:${id}`, 'Select species', SPECIES, b.species),
-    select(`affiliation:${id}`, 'Select affiliation', AFFILIATIONS, b.affiliation),
-    select(`mantle:${id}`, 'Select major mantle', MANTLES, b.alias),
+    select(`affiliation:${id}`, 'Select affiliation', AFFILIATIONS, b.affiliation, 'none'),
+    ...pageButtons(c, currentPage, 'page'),
     {
       type: 1,
       components: [
-        { type: 2, style: 2, label: 'Basic', custom_id: `edit:${id}:basic` },
-        { type: 2, style: 2, label: 'Appearance', custom_id: `edit:${id}:appearance` },
-        { type: 2, style: 2, label: 'Personality', custom_id: `edit:${id}:personality` },
-        { type: 2, style: 2, label: 'Abilities', custom_id: `edit:${id}:abilities` },
-        { type: 2, style: 2, label: 'History', custom_id: `edit:${id}:history` },
-      ],
-    },
-    {
-      type: 1,
-      components: [
-        { type: 2, style: 2, label: 'RP Info', custom_id: `edit:${id}:rp` },
-        { type: 2, style: 1, label: 'Preview', custom_id: `preview:${id}` },
+        { type: 2, style: 2, label: `Edit ${pageName(currentPage)}`, custom_id: `edit:${id}:${currentPage}` },
+        { type: 2, style: 1, label: 'Preview', custom_id: `preview:${id}:${currentPage}` },
         {
           type: 2,
           style: 3,
@@ -493,7 +590,7 @@ async function registerCommands(env) {
     },
     {
       name: 'mantle',
-      description: 'ADMIN: assign Batman or Robin to a character',
+      description: 'ADMIN: assign or clear a major mantle',
       default_member_permissions: '8',
       options: [
         {
@@ -507,11 +604,7 @@ async function registerCommands(env) {
           name: 'mantle',
           description: 'Mantle',
           required: true,
-          choices: [
-            { name: 'Batman', value: 'batman' },
-            { name: 'Robin', value: 'robin' },
-            { name: 'Clear', value: 'none' },
-          ],
+          choices: STAFF_MANTLES,
         },
       ],
     },
@@ -581,7 +674,7 @@ async function slash(i, env) {
 
       c = data;
       const msg = await createMessage(env, channelId, {
-        embeds: [sheetEmbed(c)],
+        embeds: [sheetEmbed(c, 'basic')],
       });
 
       c = await save(env, c.id, { sheet_message_id: msg.id });
@@ -592,8 +685,8 @@ async function slash(i, env) {
     }
 
     return response({
-      embeds: [sheetEmbed(c)],
-      components: editorComponents(c),
+      embeds: [sheetEmbed(c, 'basic')],
+      components: editorComponents(c, 'basic'),
       flags: EPHEMERAL,
     });
   }
@@ -616,8 +709,8 @@ async function slash(i, env) {
     }
 
     return response({
-      embeds: [sheetEmbed(c)],
-      components: editorComponents(c),
+      embeds: [sheetEmbed(c, 'basic')],
+      components: editorComponents(c, 'basic'),
       flags: EPHEMERAL,
     });
   }
@@ -631,7 +724,7 @@ async function slash(i, env) {
       return ephemeral('That user does not have an approved character.');
     }
 
-    return response({ embeds: [sheetEmbed(c)] });
+    return response({ embeds: [sheetEmbed(c, 'basic')], components: pageButtons(c, 'basic', 'publicpage') });
   }
 
   if (name === 'delete-character') {
@@ -675,7 +768,8 @@ async function slash(i, env) {
 
     const data = structuredClone(c.data || {});
     data.basic = data.basic || {};
-    data.basic.alias = mantle === 'none' ? '' : mantle;
+    const mantleLabel = STAFF_MANTLES.find((x) => x.value === mantle)?.name || mantle;
+    data.basic.alias = mantle === 'none' ? '' : mantleLabel;
 
     let updated;
 
@@ -693,7 +787,7 @@ async function slash(i, env) {
         env,
         updated.thread_id,
         updated.sheet_message_id,
-        { embeds: [sheetEmbed(updated)] },
+        { embeds: [sheetEmbed(updated, 'basic')] },
       );
     }
 
@@ -705,14 +799,29 @@ async function slash(i, env) {
 
 async function component(i, env) {
   const uid = userId(i);
-  const [kind, id] = i.data.custom_id.split(':');
+  const parts = i.data.custom_id.split(':');
+  const [kind, id] = parts;
   let c = await getCharacterById(env, id);
 
   if (!c) return ephemeral('Character not found.');
 
+  if (kind === 'publicpage') {
+    if (c.status !== 'approved') return ephemeral('That character is not approved.');
+    const page = parts[2] || 'basic';
+    return response(
+      {
+        embeds: [sheetEmbed(c, page)],
+        components: pageButtons(c, page, 'publicpage'),
+      },
+      7,
+    );
+  }
+
   if (kind === 'preview') {
+    const page = parts[2] || 'basic';
     return response({
-      embeds: [sheetEmbed(c)],
+      embeds: [sheetEmbed(c, page)],
+      components: pageButtons(c, page, 'publicpage'),
       flags: EPHEMERAL,
     });
   }
@@ -721,12 +830,23 @@ async function component(i, env) {
     return ephemeral('Only the character owner can edit this sheet.');
   }
 
+  if (kind === 'page') {
+    const page = parts[2] || 'basic';
+    return response(
+      {
+        embeds: [sheetEmbed(c, page)],
+        components: editorComponents(c, page),
+      },
+      7,
+    );
+  }
+
   if (kind === 'edit') {
-    const tab = i.data.custom_id.split(':')[2];
+    const tab = parts[2];
     return response(modalFor(c, tab), 9);
   }
 
-  if (['species', 'affiliation', 'mantle'].includes(kind)) {
+  if (['species', 'affiliation'].includes(kind)) {
     const val = i.data.values?.[0] || '';
     const data = structuredClone(c.data || {});
     data.basic = data.basic || {};
@@ -742,13 +862,6 @@ async function component(i, env) {
           : AFFILIATIONS.find((x) => x[0] === val)?.[1] || val;
     }
 
-    if (kind === 'mantle') {
-      data.basic.alias =
-        val === 'none'
-          ? ''
-          : MANTLES.find((x) => x[0] === val)?.[1] || val;
-    }
-
     if (!data.abilities?.summary) {
       data.abilities = data.abilities || {};
       data.abilities.summary = baselineFor({ ...c, data });
@@ -761,14 +874,14 @@ async function component(i, env) {
         env,
         c.thread_id,
         c.sheet_message_id,
-        { embeds: [sheetEmbed(c)] },
+        { embeds: [sheetEmbed(c, 'basic')] },
       );
     }
 
     return response(
       {
-        embeds: [sheetEmbed(c)],
-        components: editorComponents(c),
+        embeds: [sheetEmbed(c, 'basic')],
+        components: editorComponents(c, 'basic'),
       },
       7,
     );
@@ -811,7 +924,7 @@ async function component(i, env) {
         `Character: **${c.data?.basic?.name || 'Unnamed'}**\n` +
         `Writer: <@${c.owner_discord_id}>\n` +
         `Thread: <#${c.thread_id}>`,
-      embeds: [sheetEmbed(c)],
+      embeds: [sheetEmbed(c, 'basic')],
       components: [row],
     });
 
@@ -825,14 +938,14 @@ async function component(i, env) {
         env,
         c.thread_id,
         c.sheet_message_id,
-        { embeds: [sheetEmbed(c)] },
+        { embeds: [sheetEmbed(c, 'basic')] },
       );
     }
 
     return response(
       {
-        embeds: [sheetEmbed(c)],
-        components: editorComponents(c),
+        embeds: [sheetEmbed(c, 'basic')],
+        components: editorComponents(c, 'basic'),
       },
       7,
     );
@@ -869,7 +982,7 @@ async function reviewComponent(i, env) {
         env,
         u.thread_id,
         u.sheet_message_id,
-        { embeds: [sheetEmbed(u)] },
+        { embeds: [sheetEmbed(u, 'basic')] },
       );
     }
 
@@ -877,7 +990,7 @@ async function reviewComponent(i, env) {
       {
         content:
           `${i.message.content}\n\n✅ **APPROVED** by <@${userId(i)}>`,
-        embeds: [sheetEmbed(u)],
+        embeds: [sheetEmbed(u, 'basic')],
         components: [],
       },
       7,
@@ -942,7 +1055,7 @@ async function modal(i, env) {
         env,
         c.thread_id,
         c.sheet_message_id,
-        { embeds: [sheetEmbed(c)] },
+        { embeds: [sheetEmbed(c, 'basic')] },
       );
     }
 
@@ -976,7 +1089,7 @@ async function modal(i, env) {
         env,
         c.thread_id,
         c.sheet_message_id,
-        { embeds: [sheetEmbed(c)] },
+        { embeds: [sheetEmbed(c, 'basic')] },
       );
     }
 
@@ -986,7 +1099,7 @@ async function modal(i, env) {
           `${i.message?.content || ''}\n\n` +
           `**${action === 'changes' ? 'CHANGES REQUESTED' : 'DENIED'}** ` +
           `by <@${userId(i)}>\n${note}`,
-        embeds: [sheetEmbed(c)],
+        embeds: [sheetEmbed(c, 'basic')],
         components: [],
       },
       7,
@@ -1004,12 +1117,16 @@ export default {
       return new Response('Horizon Character Bot is online.');
     }
 
+    if (request.method === 'GET' && url.pathname.startsWith('/assets/')) {
+      return env.ASSETS.fetch(request);
+    }
+
     if (request.method === 'GET' && url.pathname === '/health') {
       const missing = requireEnv(env);
 
       return Response.json({
         online: true,
-        version: '3.0.0-fresh-cloudflare',
+        version: '3.2.0-dc-theme-assets',
         bindings_ok: missing.length === 0,
         missing_bindings: missing,
         has_discord_public_key: Boolean(env.DISCORD_PUBLIC_KEY),

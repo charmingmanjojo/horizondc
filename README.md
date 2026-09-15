@@ -67,3 +67,44 @@ After registration, the guild should have:
 - `/view`
 - `/delete-character`
 - `/mantle`
+
+
+## v3.1 changes
+
+- Public `/view` now uses a six-page button layout similar to the supplied reference.
+- Basic Info, Appearance, Personality, Abilities, Backstory / History, and RP Info are separate pages.
+- Selecting `None / Independent` now stays selected instead of visually resetting.
+- Superman, Wonder Woman, Aquaman, Batman, and Robin are hidden from normal character creation.
+- All five major mantles are assigned only by staff through `/mantle`.
+- The included SQL enforces one active holder for each of those five major mantles.
+
+
+## v3.2 — DC theme pass
+
+No generated banners.
+
+Uses the icon assets already created for Horizon and dynamic Discord embed colors.
+
+Visual priority:
+1. Lantern Corps
+2. Staff-assigned mantle
+3. Species
+4. Default Horizon
+
+Icons:
+- Superman
+- Wonder Woman
+- Batman
+- Robin
+- Aquaman
+- Omnitrix
+- all nine Lantern Corps variants
+
+Species fallbacks:
+- Kryptonian → Superman symbol
+- Atlantean → Aquaman symbol
+- Amazonian → Wonder Woman symbol
+- Alien / Other → Omnitrix
+- Human / Metahuman → color only
+
+Superman, Wonder Woman, Aquaman, Batman, and Robin remain staff-only through `/mantle`.

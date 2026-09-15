@@ -30,7 +30,7 @@ drop index if exists characters_unique_limited_mantle_idx;
 create unique index if not exists characters_unique_limited_mantle_idx
 on public.characters ((lower(data->'basic'->>'alias')))
 where status in ('draft','pending','changes_requested','approved')
-  and lower(data->'basic'->>'alias') in ('batman','robin');
+  and lower(data->'basic'->>'alias') in ('superman','wonder woman','aquaman','batman','robin');
 
 create or replace function public.set_updated_at()
 returns trigger
