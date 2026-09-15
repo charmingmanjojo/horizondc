@@ -51,10 +51,6 @@ Upload these as custom Discord emojis or host them as image files, then add the 
 6. Run `npm run register` once after command changes.
 7. Run `npm start`.
 
-## Current Horizon channel defaults
-- Character forum: `1548547939108921395`
-- Staff review channel: `1549109626446938292`
-
 ## Required environment variables
 - `DISCORD_TOKEN`
 - `DISCORD_CLIENT_ID`
