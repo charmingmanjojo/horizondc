@@ -108,3 +108,40 @@ Species fallbacks:
 - Human / Metahuman → color only
 
 Superman, Wonder Woman, Aquaman, Batman, and Robin remain staff-only through `/mantle`.
+
+
+## v3.3 — Clean sheet layout
+
+- Page navigation buttons now use neutral Discord gray instead of bright blurple.
+- The active page remains disabled/darker.
+- Species and Affiliation dropdowns only appear on Basic Info.
+- Other pages now look much closer to a clean read-only profile card.
+- Removed the extra `DETECTIVE COMICS: HORIZON` heading from the top of every embed.
+- Horizon branding moved into the footer so the character remains the visual focus.
+- Existing DC colors and icon logic remain unchanged.
+
+
+## v3.4 — Streamlined editor
+
+This build follows the cleaner editing flow shown in the supplied GrandxBeyond / When Dragons War references.
+
+- Removed the six-button page navigation row.
+- One section dropdown controls the current page.
+- One simple `Edit` button edits the current section.
+- `Submit` and `Cancel` sit together as final actions.
+- Species and Affiliation selectors appear only on Basic Info.
+- `/view` uses the same single section selector without editor controls.
+- Character embed title is now `Character Record`.
+- Basic Info uses a compact `PUBLIC × RECORD` presentation.
+- Existing DC colors, icons, staff-only mantles, Supabase, and review flow are preserved.
+
+
+## v3.5 — GOT-style presentation
+
+- Removed `PUBLIC × RECORD`.
+- Removed all Hunter x Hunter-style `×` wording.
+- Removed the generic `Character Record` title.
+- The character name is now the main embed title, like the When Dragons War reference.
+- Each page uses a simple section heading.
+- The streamlined section dropdown + Edit + Submit / Cancel flow remains.
+- DC colors, icons, staff-only mantles, Supabase, and review flow remain unchanged.

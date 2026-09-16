@@ -235,16 +235,13 @@ function sheetEmbed(c, page = 'basic') {
   const ab = d.abilities || {};
   const h = d.history || {};
   const rp = d.rp || {};
-  const title = `${b.name || 'Unnamed Character'}${b.alias ? ` — ${b.alias}` : ''}`.toUpperCase();
-
   const iconUrl = iconUrlFor(c);
 
+  const title = `${b.name || 'Unnamed Character'}${b.alias ? ` — ${b.alias}` : ''}`.toUpperCase();
+
   const embed = {
-    author: {
-      name: 'DETECTIVE COMICS: HORIZON',
-      ...(iconUrl ? { icon_url: iconUrl } : {}),
-    },
     title,
+    description: `**${pageName(page)}**`,
     color: colorFor(c),
     fields: [],
     ...(iconUrl ? { thumbnail: { url: iconUrl } } : {}),
@@ -255,43 +252,41 @@ function sheetEmbed(c, page = 'basic') {
 
   if (page === 'basic') {
     embed.fields = [
-      textField('Basic Info', [
-        `**Name**\n${b.name || '—'}`,
-        `**Age**\n${b.age || '—'}`,
-        `**Species**\n${b.species || '—'}`,
-        `**Mantle / Alias**\n${b.alias || 'None'}`,
-        `**Affiliation**\n${b.affiliation || 'None / Independent'}`,
-        `**Occupation**\n${b.occupation || '—'}`,
-        `**Origin**\n${b.origin || '—'}`,
-        `**Build**\n${a.build || '—'}`,
-      ].join('\n\n')),
+      textField('Name', b.name || 'Not set'),
+      textField('Age', b.age || 'Not set'),
+      textField('Species', b.species || 'Not set'),
+      textField('Alias / Mantle', b.alias || 'Not set'),
+      textField('Affiliation', b.affiliation || 'Independent'),
+      textField('Occupation', b.occupation || 'Not set'),
+      textField('Origin', b.origin || 'Not set'),
+      ...(a.build ? [textField('Build', a.build)] : []),
     ];
   }
 
   if (page === 'appearance') {
     embed.fields = [
-      textField('Appearance', a.description || 'Not provided'),
-      textField('Height', a.height || '—', true),
-      textField('Build', a.build || '—', true),
+      textField('Appearance', a.description || 'Not set'),
+      textField('Height', a.height || 'Not set', true),
+      textField('Build', a.build || 'Not set', true),
     ];
   }
 
   if (page === 'personality') {
     embed.fields = [
-      textField('Personality', p.summary || 'Not provided'),
-      textField('Goals / Motivations', p.goals || '—', true),
-      textField('Flaws / Fears', p.flaws || '—', true),
+      textField('Personality', p.summary || 'Not set'),
+      textField('Goals / Motivations', p.goals || 'Not set'),
+      textField('Flaws / Fears', p.flaws || 'Not set'),
     ];
   }
 
   if (page === 'abilities') {
     embed.fields = [
-      textField('Abilities / Equipment', ab.summary || baselineFor(c) || 'Not provided'),
+      textField('Abilities / Equipment', ab.summary || baselineFor(c) || 'Not set'),
     ];
   }
 
   if (page === 'history') {
-    const history = String(h.summary || 'Not provided');
+    const history = String(h.summary || 'Not set');
     const chunks = [];
     for (let i = 0; i < history.length; i += 1024) {
       chunks.push(history.slice(i, i + 1024));
@@ -303,41 +298,42 @@ function sheetEmbed(c, page = 'basic') {
 
   if (page === 'rp') {
     embed.fields = [
-      textField('Writer Notes', rp.notes || 'Not provided'),
-      textField('Wanted Connections', rp.connections || '—'),
-      textField('Status', String(c.status).replaceAll('_', ' ').toUpperCase(), true),
-      textField('Completion', `${completion(c)}%`, true),
+      textField('Writer Notes', rp.notes || 'Not set'),
+      textField('Wanted Connections', rp.connections || 'Not set'),
     ];
   }
 
   return embed;
 }
 
-function pageButtons(c, current = 'basic', prefix = 'page') {
+function sectionSelect(c, current = 'basic', prefix = 'page') {
   const id = c.id;
   const pages = [
     ['basic', 'Basic Info'],
     ['appearance', 'Appearance'],
     ['personality', 'Personality'],
-    ['abilities', 'Abilities'],
+    ['abilities', 'Abilities / Equipment'],
     ['history', 'Backstory / History'],
     ['rp', 'RP Info'],
   ];
 
-  const rows = [];
-  for (let i = 0; i < pages.length; i += 5) {
-    rows.push({
-      type: 1,
-      components: pages.slice(i, i + 5).map(([value, label]) => ({
-        type: 2,
-        style: value === current ? 2 : 1,
-        label,
-        custom_id: `${prefix}:${id}:${value}`,
-        disabled: value === current,
-      })),
-    });
-  }
-  return rows;
+  return {
+    type: 1,
+    components: [
+      {
+        type: 3,
+        custom_id: `${prefix}:${id}`,
+        placeholder: pageName(current),
+        min_values: 1,
+        max_values: 1,
+        options: pages.map(([value, label]) => ({
+          label,
+          value,
+          default: value === current,
+        })),
+      },
+    ],
+  };
 }
 
 function select(customId, placeholder, values, current, blankValue = null) {
@@ -364,16 +360,32 @@ function select(customId, placeholder, values, current, blankValue = null) {
 function editorComponents(c, currentPage = 'basic') {
   const id = c.id;
   const b = c.data?.basic || {};
+  const components = [
+    sectionSelect(c, currentPage, 'page'),
+  ];
 
-  return [
-    select(`species:${id}`, 'Select species', SPECIES, b.species),
-    select(`affiliation:${id}`, 'Select affiliation', AFFILIATIONS, b.affiliation, 'none'),
-    ...pageButtons(c, currentPage, 'page'),
+  if (currentPage === 'basic') {
+    components.push(
+      select(`species:${id}`, 'Species', SPECIES, b.species),
+      select(`affiliation:${id}`, 'Affiliation', AFFILIATIONS, b.affiliation, 'none'),
+    );
+  }
+
+  components.push(
     {
       type: 1,
       components: [
-        { type: 2, style: 2, label: `Edit ${pageName(currentPage)}`, custom_id: `edit:${id}:${currentPage}` },
-        { type: 2, style: 1, label: 'Preview', custom_id: `preview:${id}:${currentPage}` },
+        {
+          type: 2,
+          style: 1,
+          label: 'Edit',
+          custom_id: `edit:${id}:${currentPage}`,
+        },
+      ],
+    },
+    {
+      type: 1,
+      components: [
         {
           type: 2,
           style: 3,
@@ -381,9 +393,17 @@ function editorComponents(c, currentPage = 'basic') {
           custom_id: `submit:${id}`,
           disabled: completion(c) < 100 || c.status === 'pending',
         },
+        {
+          type: 2,
+          style: 2,
+          label: 'Cancel',
+          custom_id: `cancel:${id}`,
+        },
       ],
     },
-  ];
+  );
+
+  return components;
 }
 
 function modalFor(c, tab) {
@@ -724,7 +744,7 @@ async function slash(i, env) {
       return ephemeral('That user does not have an approved character.');
     }
 
-    return response({ embeds: [sheetEmbed(c, 'basic')], components: pageButtons(c, 'basic', 'publicpage') });
+    return response({ embeds: [sheetEmbed(c, 'basic')], components: [sectionSelect(c, 'basic', 'publicpage')] });
   }
 
   if (name === 'delete-character') {
@@ -807,11 +827,11 @@ async function component(i, env) {
 
   if (kind === 'publicpage') {
     if (c.status !== 'approved') return ephemeral('That character is not approved.');
-    const page = parts[2] || 'basic';
+    const page = i.data.values?.[0] || 'basic';
     return response(
       {
         embeds: [sheetEmbed(c, page)],
-        components: pageButtons(c, page, 'publicpage'),
+        components: [sectionSelect(c, page, 'publicpage')],
       },
       7,
     );
@@ -821,7 +841,7 @@ async function component(i, env) {
     const page = parts[2] || 'basic';
     return response({
       embeds: [sheetEmbed(c, page)],
-      components: pageButtons(c, page, 'publicpage'),
+      components: [sectionSelect(c, page, 'publicpage')],
       flags: EPHEMERAL,
     });
   }
@@ -831,7 +851,7 @@ async function component(i, env) {
   }
 
   if (kind === 'page') {
-    const page = parts[2] || 'basic';
+    const page = i.data.values?.[0] || 'basic';
     return response(
       {
         embeds: [sheetEmbed(c, page)],
@@ -882,6 +902,17 @@ async function component(i, env) {
       {
         embeds: [sheetEmbed(c, 'basic')],
         components: editorComponents(c, 'basic'),
+      },
+      7,
+    );
+  }
+
+  if (kind === 'cancel') {
+    return response(
+      {
+        content: 'Character editor closed.',
+        embeds: [],
+        components: [],
       },
       7,
     );
@@ -1126,7 +1157,7 @@ export default {
 
       return Response.json({
         online: true,
-        version: '3.2.0-dc-theme-assets',
+        version: '3.5.0-got-style-presentation',
         bindings_ok: missing.length === 0,
         missing_bindings: missing,
         has_discord_public_key: Boolean(env.DISCORD_PUBLIC_KEY),
