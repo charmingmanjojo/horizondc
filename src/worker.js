@@ -171,20 +171,58 @@ function iconUrlFor(c) {
   return `https://horizondc.crownfallrpg.workers.dev/assets/${icon}`;
 }
 
-function completion(c) {
+function fieldText(v) {
+  return String(v || '').trim();
+}
+
+function validationErrors(c) {
   const d = c?.data || {};
-  const req = [
-    d.basic?.name,
-    d.basic?.age,
-    d.basic?.species,
-    d.appearance?.description,
-    d.personality?.summary,
-    d.history?.summary,
+  const b = d.basic || {};
+  const a = d.appearance || {};
+  const p = d.personality || {};
+  const ab = d.abilities || {};
+  const h = d.history || {};
+
+  const checks = [
+    ['Character Name', b.name, 2],
+    ['Age', b.age, 1],
+    ['Species', b.species, 1],
+    ['Origin / Homeworld', b.origin, 3],
+
+    ['Appearance', a.description, 100],
+    ['Height', a.height, 1],
+    ['Build', a.build, 2],
+
+    ['Personality', p.summary, 200],
+    ['Temperament', p.temperament, 40],
+    ['Strengths', p.strengths, 40],
+    ['Flaws', p.flaws, 40],
+    ['Fears', p.fears, 40],
+
+    ['Abilities / Skills', ab.summary, 120],
+    ['Limits / Weaknesses', ab.limitations, 60],
+
+    ['Backstory / History', h.summary, 500],
   ];
 
-  return Math.round(
-    (req.filter((v) => String(v || '').trim()).length / req.length) * 100,
-  );
+  const errors = [];
+  for (const [label, value, min] of checks) {
+    const len = fieldText(value).length;
+    if (len < min) {
+      errors.push(`${label} (${len}/${min} characters)`);
+    }
+  }
+  return errors;
+}
+
+function completion(c) {
+  const total = 15;
+  const missing = validationErrors(c).length;
+  return Math.max(0, Math.round(((total - missing) / total) * 100));
+}
+
+function readyToSubmit(c) {
+  return validationErrors(c).length === 0;
 }
 
 function baselineFor(c) {
@@ -274,14 +312,18 @@ function sheetEmbed(c, page = 'basic') {
   if (page === 'personality') {
     embed.fields = [
       textField('Personality', p.summary || 'Not set'),
-      textField('Goals / Motivations', p.goals || 'Not set'),
-      textField('Flaws / Fears', p.flaws || 'Not set'),
+      textField('Temperament', p.temperament || 'Not set'),
+      textField('Strengths', p.strengths || 'Not set'),
+      textField('Flaws', p.flaws || 'Not set'),
+      textField('Fears', p.fears || 'Not set'),
     ];
   }
 
   if (page === 'abilities') {
     embed.fields = [
-      textField('Abilities / Equipment', ab.summary || baselineFor(c) || 'Not set'),
+      textField('Abilities / Skills', ab.summary || 'Not set'),
+      textField('Limits / Weaknesses', ab.limitations || 'Not set'),
+      textField('Equipment', ab.equipment || 'None listed'),
     ];
   }
 
@@ -391,7 +433,7 @@ function editorComponents(c, currentPage = 'basic') {
           style: 3,
           label: 'Submit',
           custom_id: `submit:${id}`,
-          disabled: completion(c) < 100 || c.status === 'pending',
+          disabled: !readyToSubmit(c) || c.status === 'pending',
         },
         {
           type: 2,
@@ -417,6 +459,8 @@ function modalFor(c, tab) {
     style = 1,
     required = false,
     maxLength = 1000,
+    minLength = null,
+    placeholder = null,
   ) => ({
     type: 1,
     components: [
@@ -427,6 +471,8 @@ function modalFor(c, tab) {
         style,
         required,
         max_length: maxLength,
+        ...(minLength ? { min_length: minLength } : {}),
+        ...(placeholder ? { placeholder } : {}),
         value: String(value || '').slice(0, maxLength),
       },
     ],
@@ -436,45 +482,42 @@ function modalFor(c, tab) {
 
   if (tab === 'basic') {
     components = [
-      inp('name', 'Character Name', d.name, 1, true, 100),
-      inp('age', 'Age', d.age, 1, true, 50),
+      inp('name', 'Character Name', d.name, 1, true, 100, 2),
+      inp('age', 'Age', d.age, 1, true, 50, 1),
       inp('occupation', 'Occupation', d.occupation, 1, false, 100),
-      inp('origin', 'Origin / Nationality / Homeworld', d.origin, 2, false, 700),
+      inp('origin', 'Origin / Nationality / Homeworld', d.origin, 2, true, 700, 3),
     ];
   }
 
   if (tab === 'appearance') {
     components = [
-      inp('description', 'Appearance', d.description, 2, true, 1800),
-      inp('height', 'Height', d.height, 1, false, 80),
-      inp('build', 'Build', d.build, 1, false, 120),
+      inp('description', 'Appearance', d.description, 2, true, 1800, 100, 'Describe face, hair, clothing, notable features, etc.'),
+      inp('height', 'Height', d.height, 1, true, 80, 1),
+      inp('build', 'Build', d.build, 1, true, 120, 2),
     ];
   }
 
   if (tab === 'personality') {
     components = [
-      inp('summary', 'Personality', d.summary, 2, true, 2000),
-      inp('goals', 'Goals / Motivations', d.goals, 2, false, 900),
-      inp('flaws', 'Flaws / Fears', d.flaws, 2, false, 900),
+      inp('summary', 'Personality', d.summary, 2, true, 2000, 200, 'How do they think, act, and treat other people?'),
+      inp('temperament', 'Temperament', d.temperament, 2, true, 700, 40),
+      inp('strengths', 'Strengths', d.strengths, 2, true, 700, 40),
+      inp('flaws', 'Flaws', d.flaws, 2, true, 700, 40),
+      inp('fears', 'Fears', d.fears, 2, true, 700, 40),
     ];
   }
 
   if (tab === 'abilities') {
     components = [
-      inp(
-        'summary',
-        'Abilities / Equipment',
-        d.summary || baselineFor(c),
-        2,
-        false,
-        3000,
-      ),
+      inp('summary', 'Abilities / Skills', d.summary, 2, true, 3000, 120, 'Powers, training, magic, skills, physiology, etc.'),
+      inp('limitations', 'Limits / Weaknesses', d.limitations, 2, true, 1800, 60, 'Meaningful limits, costs, counters, conditions, or weaknesses.'),
+      inp('equipment', 'Equipment', d.equipment, 2, false, 1200, null, 'Weapons, armor, technology, artifacts, or None.'),
     ];
   }
 
   if (tab === 'history') {
     components = [
-      inp('summary', 'History / Backstory', d.summary, 2, true, 4000),
+      inp('summary', 'History / Backstory', d.summary, 2, true, 4000, 500, 'Give staff enough history to understand who this character is and how they reached the present day.'),
     ];
   }
 
@@ -490,6 +533,62 @@ function modalFor(c, tab) {
     title: `Edit ${tab}`,
     components,
   };
+}
+
+function submissionContent(c, status = 'Pending', reviewerId = null) {
+  const name = c.data?.basic?.name || 'Unnamed Character';
+  let content =
+    `**Character submission by <@${c.owner_discord_id}>**\n` +
+    `**Status:** ${status}\n` +
+    `**Character:** ${name}\n` +
+    `**Thread:** <#${c.thread_id}>`;
+
+  if (reviewerId) content += `\n**Reviewed by:** <@${reviewerId}>`;
+  return content;
+}
+
+function reviewEmbed(c, page, continued = false) {
+  const e = sheetEmbed(c, page);
+  const name = c.data?.basic?.name || 'Unnamed Character';
+  e.title = continued ? `${name} — continued` : name;
+  e.footer = undefined;
+  return e;
+}
+
+async function sendSubmissionPacket(env, c, row) {
+  // Main review message: Basic Info + review buttons.
+  const main = await createMessage(env, env.CHARACTER_REVIEW_CHANNEL_ID, {
+    content: submissionContent(c, '🟡 Pending'),
+    embeds: [reviewEmbed(c, 'basic')],
+    components: [row],
+  });
+
+  // Everything else is posted directly below it so staff never have to
+  // open the applicant's thread just to review the character.
+  await createMessage(env, env.CHARACTER_REVIEW_CHANNEL_ID, {
+    embeds: [reviewEmbed(c, 'appearance', true)],
+  });
+
+  await createMessage(env, env.CHARACTER_REVIEW_CHANNEL_ID, {
+    embeds: [reviewEmbed(c, 'personality', true)],
+  });
+
+  await createMessage(env, env.CHARACTER_REVIEW_CHANNEL_ID, {
+    embeds: [reviewEmbed(c, 'abilities', true)],
+  });
+
+  await createMessage(env, env.CHARACTER_REVIEW_CHANNEL_ID, {
+    embeds: [reviewEmbed(c, 'history', true)],
+  });
+
+  const rp = c.data?.rp || {};
+  if (fieldText(rp.notes) || fieldText(rp.connections)) {
+    await createMessage(env, env.CHARACTER_REVIEW_CHANNEL_ID, {
+      embeds: [reviewEmbed(c, 'rp', true)],
+    });
+  }
+
+  return main;
 }
 
 async function discord(env, path, init = {}) {
@@ -882,11 +981,6 @@ async function component(i, env) {
           : AFFILIATIONS.find((x) => x[0] === val)?.[1] || val;
     }
 
-    if (!data.abilities?.summary) {
-      data.abilities = data.abilities || {};
-      data.abilities.summary = baselineFor({ ...c, data });
-    }
-
     c = await save(env, id, { data });
 
     if (c.sheet_message_id) {
@@ -919,9 +1013,10 @@ async function component(i, env) {
   }
 
   if (kind === 'submit') {
-    if (completion(c) < 100) {
+    const errors = validationErrors(c);
+    if (errors.length) {
       return ephemeral(
-        'Finish the required character sections before submitting.',
+        `Finish the required character sections before submitting:\n• ${errors.join('\n• ')}`,
       );
     }
 
@@ -949,15 +1044,7 @@ async function component(i, env) {
       ],
     };
 
-    const msg = await createMessage(env, env.CHARACTER_REVIEW_CHANNEL_ID, {
-      content:
-        `**CHARACTER SUBMISSION**\n` +
-        `Character: **${c.data?.basic?.name || 'Unnamed'}**\n` +
-        `Writer: <@${c.owner_discord_id}>\n` +
-        `Thread: <#${c.thread_id}>`,
-      embeds: [sheetEmbed(c, 'basic')],
-      components: [row],
-    });
+    const msg = await sendSubmissionPacket(env, c, row);
 
     c = await save(env, id, {
       status: 'pending',
@@ -1019,9 +1106,8 @@ async function reviewComponent(i, env) {
 
     return response(
       {
-        content:
-          `${i.message.content}\n\n✅ **APPROVED** by <@${userId(i)}>`,
-        embeds: [sheetEmbed(u, 'basic')],
+        content: submissionContent(u, '✅ Approved', userId(i)),
+        embeds: [reviewEmbed(u, 'basic')],
         components: [],
       },
       7,
@@ -1127,10 +1213,9 @@ async function modal(i, env) {
     return response(
       {
         content:
-          `${i.message?.content || ''}\n\n` +
-          `**${action === 'changes' ? 'CHANGES REQUESTED' : 'DENIED'}** ` +
-          `by <@${userId(i)}>\n${note}`,
-        embeds: [sheetEmbed(c, 'basic')],
+          `${submissionContent(c, action === 'changes' ? '🟠 Changes Requested' : '❌ Denied', userId(i))}\n` +
+          `**Reason:** ${note}`,
+        embeds: [reviewEmbed(c, 'basic')],
         components: [],
       },
       7,
@@ -1157,7 +1242,7 @@ export default {
 
       return Response.json({
         online: true,
-        version: '3.5.0-got-style-presentation',
+        version: '3.6.0-full-review-packet',
         bindings_ok: missing.length === 0,
         missing_bindings: missing,
         has_discord_public_key: Boolean(env.DISCORD_PUBLIC_KEY),

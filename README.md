@@ -145,3 +145,28 @@ This build follows the cleaner editing flow shown in the supplied GrandxBeyond /
 - Each page uses a simple section heading.
 - The streamlined section dropdown + Edit + Submit / Cancel flow remains.
 - DC colors, icons, staff-only mantles, Supabase, and review flow remain unchanged.
+
+
+## v3.6 — Full submission review
+
+Character submissions now post the full application into the review channel.
+
+Review packet:
+- Basic Info + Approve / Request Changes / Deny
+- Appearance
+- Personality
+- Abilities / Skills + Limits / Weaknesses + Equipment
+- Full Backstory / History
+- Optional RP Info
+
+Submission requirements are stricter so a user cannot unlock Submit with one-line filler:
+- Origin required
+- Appearance: 100+ characters
+- Height and Build required
+- Personality: 200+ characters
+- Temperament, Strengths, Flaws, Fears: 40+ characters each
+- Abilities / Skills: 120+ characters
+- Limits / Weaknesses: 60+ characters
+- Backstory / History: 500+ characters
+
+Species and affiliation no longer auto-fill the abilities section. Baseline species powers can still be used as guidance, but the applicant must write their actual spec.
