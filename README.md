@@ -170,3 +170,14 @@ Submission requirements are stricter so a user cannot unlock Submit with one-lin
 - Backstory / History: 500+ characters
 
 Species and affiliation no longer auto-fill the abilities section. Baseline species powers can still be used as guidance, but the applicant must write their actual spec.
+
+
+## v3.7 — Change-request notifications
+
+When staff presses `Request Changes` and enters a reason:
+
+- The application status becomes `changes_requested`.
+- The applicant is directly @mentioned inside their own character thread.
+- The requested changes are included in that notification.
+- The message tells them to use `/sheet`, make the edits, and press `Submit` again.
+- Resubmitting creates a fresh review packet and clears the previous review note.

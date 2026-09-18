@@ -591,6 +591,19 @@ async function sendSubmissionPacket(env, c, row) {
   return main;
 }
 
+async function notifyApplicantChanges(env, c, note, reviewerId) {
+  return createMessage(env, c.thread_id, {
+    content:
+      `<@${c.owner_discord_id}> **Changes have been requested for your character application.**\n\n` +
+      `**Requested changes:**\n${note}\n\n` +
+      `Use \`/sheet\` in this post to make your edits, then press **Submit** again when you're ready for another review.` +
+      (reviewerId ? `\n\nReviewed by: <@${reviewerId}>` : ''),
+    allowed_mentions: {
+      users: [c.owner_discord_id],
+    },
+  });
+}
+
 async function discord(env, path, init = {}) {
   return fetch(`${DISCORD_API}${path}`, {
     ...init,
@@ -1049,6 +1062,7 @@ async function component(i, env) {
     c = await save(env, id, {
       status: 'pending',
       review_message_id: msg.id,
+      review_note: null,
     });
 
     if (c.sheet_message_id) {
@@ -1210,6 +1224,10 @@ async function modal(i, env) {
       );
     }
 
+    if (action === 'changes') {
+      await notifyApplicantChanges(env, c, note, userId(i));
+    }
+
     return response(
       {
         content:
@@ -1242,7 +1260,7 @@ export default {
 
       return Response.json({
         online: true,
-        version: '3.6.0-full-review-packet',
+        version: '3.7.0-change-request-pings',
         bindings_ok: missing.length === 0,
         missing_bindings: missing,
         has_discord_public_key: Boolean(env.DISCORD_PUBLIC_KEY),
